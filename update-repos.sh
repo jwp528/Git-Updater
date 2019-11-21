@@ -7,6 +7,28 @@
 UPDATE_COUNT=0
 START=$SECONDS
 
+#param flags - all defaulted
+quiet=0
+silent=0
+
+#loop through all params and configure
+while test $# -gt 0
+do
+  case "$1" in
+    -q) quiet=1
+      ;;
+    --quiet) quiet=1
+      ;;
+    -s) silent=1
+      ;;
+    --silent) silent=1
+      ;;
+    *) echo "Skipping $1. unsupported arg"
+      ;;
+  esac
+  shift
+done
+
 #calculates time to minutes and seconds
 function secondsToMinutes {
   TOTAL_TIME=$(bc<<<"scale=2; $1/$2");
@@ -34,28 +56,45 @@ for d in */; do
     cd "$d"
     if [ ! -d ".git" ] && [ ! -f "package.json" ]
     then
-      echo "SKIPPING. No repo or node app found" && SKIP=1
+      SKIP=1
+
+      if [ "$quiet" -ne 1 ] && [ "$silent" -ne 1 ]
+      then
+        echo "SKIPPING. No repo or node app found"
+      fi
     fi
 
     if [ $SKIP = 0 ]
     then
-      echo ===============================
-      echo "$UPDATE_COUNT: $d"
-      echo ===============================
+      if [ "$quiet" -ne 1 ] && [ "$silent" -ne 1 ]
+      then
+        echo ===============================
+        echo "$UPDATE_COUNT: $d"
+        echo ===============================
+      fi
 
       if [ -d ".git" ]
       then
-       cmdtime="$(\time -f %E git pull --quiet 2>&1 1>/dev/null)"
-       echo "Git Repo pulled in $cmdtime seconds"
+        cmdtime="$(\time -f %E git pull --quiet 2>&1 1>/dev/null)"
+        if [ "$quiet" -ne 1 ] && [ "$silent" -ne 1 ]
+        then
+          echo "Git Repo pulled in $cmdtime seconds"
+        fi
       fi
 
       if [ -f "package.json" ]
       then
         nodetime="$(\time -f %E npm --silent i 2>&1 1>/dev/null)"
-	echo "Node Modules updated in $nodetime seconds"
+        if [ "$quiet" -ne 1 ] && [ "$silent" -ne 1 ]
+        then
+	        echo "Node Modules updated in $nodetime seconds"
+        fi
       fi
-
-      echo ""
+      
+      if [ "$quiet" -ne 1 ] && [ "$silent" -ne 1 ]
+      then
+        echo ""
+      fi
     else
       ((UPDATE_COUNT--))
     fi
@@ -69,17 +108,17 @@ diff DIFF $S $E
 
 TOTAL_TIME=$((SECONDS-START))
 
-echo ""
-echo ""
-echo "UPDATE COMPLETE!"
-echo "====================="
-echo "Repos Updated: $UPDATE_COUNT"
-echo "Time to update: $TOTAL_TIME seconds"
-echo "====================="
-echo ""
-echo ""
-echo "TESTING VARS"
-echo "Start: $S"
-echo "End: $E"
-echo "Diff: $DIFF"
+if [ "$quiet" -ne 1 ] && [ "$silent" -ne 1 ]
+then
+  echo ""
+  echo ""
+  echo "UPDATE COMPLETE!"
+  echo "====================="
+fi
+
+if [ "$silent" -ne 1 ]
+then
+  echo "Repos Updated: $UPDATE_COUNT"
+  printf "Time to update: %0.2f \n" $DIFF
+fi
 
