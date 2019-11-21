@@ -2,15 +2,39 @@
 # Nov 20th 2019
 # Updates all git repositories in the parent directory this script sits in
 # and run npm i to install potentially new packages
+
+#global vars
 UPDATE_COUNT=0
+START=$SECONDS
+
+#calculates time to minutes and seconds
+function secondsToMinutes {
+  TOTAL_TIME=$(bc<<<"scale=2; $1/$2");
+}
+
+# capture the time
+function gettime {
+  eval $1=$(date +%s.%N);
+}
+
+# calculates the difference between 2 provided times taken from gettime
+# assigns this value to the first variable in the arg list
+function diff {
+  eval $1=$(bc<<<"scale=2; $3 - $2");
+
+}
+
+# start the timer
+gettime S
+
 for d in */; do
   ((UPDATE_COUNT++))
   SKIP=0
   (
     cd "$d"
-    if [ ! -d ".git" ] && [ ! -d "node_modules" ]
+    if [ ! -d ".git" ] && [ ! -f "package.json" ]
     then
-      echo SKIPPING. No repo or node app found && SKIP=1
+      echo "SKIPPING. No repo or node app found" && SKIP=1
     fi
 
     if [ $SKIP = 0 ]
@@ -21,12 +45,14 @@ for d in */; do
 
       if [ -d ".git" ]
       then
-        git pull --quiet && echo Repo pulled
+       cmdtime="$(\time -f %E git pull --quiet 2>&1 1>/dev/null)"
+       echo "Git Repo pulled in $cmdtime seconds"
       fi
 
-      if [ -d "node_modules" ]
+      if [ -f "package.json" ]
       then
-        npm --silent i
+        nodetime="$(\time -f %E npm --silent i 2>&1 1>/dev/null)"
+	echo "Node Modules updated in $nodetime seconds"
       fi
 
       echo ""
@@ -35,9 +61,25 @@ for d in */; do
     fi
   )
 done
+# stop the total timer
+gettime E
+
+# calculate the total time
+diff DIFF $S $E
+
+TOTAL_TIME=$((SECONDS-START))
 
 echo ""
 echo ""
 echo "UPDATE COMPLETE!"
-echo "================"
+echo "====================="
 echo "Repos Updated: $UPDATE_COUNT"
+echo "Time to update: $TOTAL_TIME seconds"
+echo "====================="
+echo ""
+echo ""
+echo "TESTING VARS"
+echo "Start: $S"
+echo "End: $E"
+echo "Diff: $DIFF"
+
